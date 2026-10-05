@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Hosted Media Platform · Portfolio</title>
+<meta name="description" content="Case study: designing and running a self-hosted media server with automated imports, metadata cleanup, reading-order lists, off-site backups and phone alerts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6170; --line:#e4e4e0;
+  --accent:#2f6df6; --accent-soft:#e8efff; --good:#1f9d6b; --good-soft:#e3f6ee; --warn:#c2410c; --warn-soft:#fdeee6;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1115; --surface:#171a21; --ink:#eceef3; --muted:#9aa1b2; --line:#272b35;
+    --accent:#6b9bff; --accent-soft:#1b2540; --good:#3ccf94; --good-soft:#123026; --warn:#ff8a5c; --warn-soft:#3a2016;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#171a21; --ink:#eceef3; --muted:#9aa1b2; --line:#272b35;
+  --accent:#6b9bff; --accent-soft:#1b2540; --good:#3ccf94; --good-soft:#123026; --warn:#ff8a5c; --warn-soft:#3a2016;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:58px;gap:12px}
+.brand{font-weight:700;letter-spacing:-.01em}
+nav a{color:var(--muted);font-size:14px;margin-left:18px}
+nav a:hover{color:var(--ink);text-decoration:none}
+@media (max-width:640px){nav a:not(.keep){display:none}}
+.hero{padding:72px 0 40px}
+.eyebrow{display:inline-block;font:500 12px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:7px 10px;border-radius:999px}
+h1{font-size:clamp(32px,5.4vw,54px);line-height:1.08;letter-spacing:-.03em;margin:18px 0 16px;font-weight:800;max-width:15ch}
+.lede{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:62ch;margin:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:40px 0 8px}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:28px;letter-spacing:-.02em;font-weight:800}
+.stat span{color:var(--muted);font-size:14px}
+section{padding:56px 0;border-top:1px solid var(--line)}
+h2{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.02em;margin:0 0 8px;font-weight:800}
+.sub{color:var(--muted);margin:0 0 28px;max-width:64ch}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:860px){.grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 6px;font-size:18px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--muted)}
+.icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);margin-bottom:12px}
+.icon svg{width:20px;height:20px}
+/* architecture diagram */
+.arch{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:12px}
+@media (max-width:820px){.arch{grid-template-columns:1fr}.arrow{transform:rotate(90deg);justify-self:center}}
+.col{display:flex;flex-direction:column;gap:10px}
+.colhead{font:500 12px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.node{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:600;font-size:15px;box-shadow:var(--shadow)}
+.node small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.node.hl{border-color:var(--accent);background:var(--accent-soft)}
+.arrow{color:var(--muted);font-size:26px;text-align:center}
+.base{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px}
+.pill{border:1px dashed var(--line);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--muted);background:var(--surface)}
+/* case studies */
+.case{display:grid;grid-template-columns:140px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
+.case:last-child{border-bottom:0}
+@media (max-width:640px){.case{grid-template-columns:1fr;gap:8px}}
+.tag{font:500 12px/1 "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:7px 10px;border-radius:8px;align-self:start;justify-self:start}
+.case h3{margin:0 0 8px;font-size:19px;letter-spacing:-.01em}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px}
+.step b{display:block;font:500 11px/1.4 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;color:var(--muted)}
+.step.fix b{color:var(--good)}
+.step.fix{border-color:color-mix(in srgb,var(--good) 35%,var(--line));background:var(--good-soft)}
+/* rules */
+.rule{display:flex;gap:12px;align-items:flex-start}
+.check{flex:none;width:24px;height:24px;border-radius:7px;background:var(--good-soft);color:var(--good);display:grid;place-items:center;font-weight:800;font-size:14px;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:500}
+.role li{margin:0 0 10px}
+.role ul{padding-left:20px;margin:0}
+footer{padding:36px 0 56px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+.toggle{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px Inter,sans-serif;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Portfolio</div>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#problems">Problems solved</a>
+      <a href="#role">My role</a>
+      <button class="toggle keep" id="theme" aria-label="Switch light or dark mode">◐ Theme</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <span class="eyebrow">Case study · Self-hosting &amp; automation</span>
+    <h1>A self-hosted media platform I designed and run</h1>
+    <p class="lede">A private cloud server that hosts my audiobook, ebook and comic libraries and keeps them clean on its own: new books and comics are imported, matched, de-duplicated and organised automatically, backed up off-site every night, and I get a phone alert when something needs attention.</p>
+    <div class="stats">
+      <div class="stat"><b>20+</b><span>services in Docker</span></div>
+      <div class="stat"><b>300+</b><span>audiobooks &amp; ebooks</span></div>
+      <div class="stat"><b>1,600+</b><span>comic issues</span></div>
+      <div class="stat"><b>Nightly</b><span>off-site backups &amp; checks</span></div>
+    </div>
+  </div>
+
+  <section id="overview">
+    <h2>What it does</h2>
+    <p class="sub">One server, reachable securely from my phone, laptop, e-reader and TVs, and designed to need as little hands-on work as possible.</p>
+    <div class="grid3">
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h3>Book library</h3><p>Audiobooks and ebooks live together: each book appears once with both formats, grouped into series in reading order.</p></div>
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div><h3>Comic library</h3><p>A checklist drives what gets collected, and the server builds reading lists for multi-series events, including 100+ issue reading orders.</p></div>
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div><h3>Automation</h3><p>Scheduled jobs import new arrivals, match ebooks to their audiobooks, fix series labels and rebuild reading lists without me lifting a finger.</p></div>
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3>Security</h3><p>Services sit behind Cloudflare Tunnel and Cloudflare Access, with key-only SSH and secrets kept out of the code repository.</p></div>
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div><h3>Backups</h3><p>Encrypted nightly backups to Backblaze B2 with daily, weekly and monthly versions, proven by a real point-in-time restore.</p></div>
+      <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></div><h3>Everywhere I read and watch</h3><p>Reading progress syncs between my e-reader and the server, and the apps run on my phone, Fire TV and Samsung TVs.</p></div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>How it fits together</h2>
+    <p class="sub">New material comes in, gets checked and organised by automation, and lands in the libraries I actually use.</p>
+    <div class="arch">
+      <div class="col">
+        <div class="colhead">Requests &amp; arrivals</div>
+        <div class="node">Wish list<small>what I want next</small></div>
+        <div class="node">Download clients<small>files arriving in inboxes</small></div>
+        <div class="node">Checklists<small>which issues each list needs</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="col">
+        <div class="colhead">Automation (Python)</div>
+        <div class="node hl">Importer<small>match, de-duplicate, file</small></div>
+        <div class="node hl">List builder<small>reading orders from published guides</small></div>
+        <div class="node hl">Nightly tidy<small>series &amp; metadata checks</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="col">
+        <div class="colhead">Libraries</div>
+        <div class="node">Audiobookshelf<small>audiobooks + ebooks</small></div>
+        <div class="node">Komga<small>comics &amp; reading lists</small></div>
+        <div class="node">Apps<small>phone, e-reader, TVs</small></div>
+      </div>
+    </div>
+    <div class="base">
+      <span class="pill">Ubuntu VPS</span><span class="pill">Docker</span><span class="pill">Cloudflare Tunnel &amp; Access</span><span class="pill">Restic → Backblaze B2</span><span class="pill">ntfy phone alerts</span><span class="pill">Git / GitHub</span>
+    </div>
+  </section>
+
+  <section id="problems">
+    <h2>Problems I solved</h2>
+    <p class="sub">Real production issues I noticed, tracked to their cause and fixed, each with a guard added so it can't come back.</p>
+
+    <div class="case">
+      <span class="tag">Data recovery</span>
+      <div>
+        <h3>Book descriptions changed after an import</h3>
+        <div class="steps">
+          <div class="step"><b>Noticed</b>Some audiobooks suddenly showed the wrong descriptions.</div>
+          <div class="step"><b>Cause</b>Ebook metadata files copied next to the audiobooks were overriding them.</div>
+          <div class="step fix"><b>Fix</b>Restored the originals from a point-in-time off-site backup, checked each item, and changed the importer so it can't happen again.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <span class="tag">Pipeline</span>
+      <div>
+        <h3>Downloads silently stopped starting</h3>
+        <div class="steps">
+          <div class="step"><b>Noticed</b>Items were "sent" but never arrived.</div>
+          <div class="step"><b>Cause</b>New links were piling up in the download manager's queue, which was never auto-confirming them.</div>
+          <div class="step fix"><b>Fix</b>Turned on auto-confirm, cleared the stale queue, and proved it with an end-to-end test download.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <span class="tag">Data integrity</span>
+      <div>
+        <h3>Series looked incomplete after a cleanup</h3>
+        <div class="steps">
+          <div class="step"><b>Noticed</b>Series were missing books after duplicate entries were merged.</div>
+          <div class="step"><b>Cause</b>The series labels lived on the entries that were removed.</div>
+          <div class="step fix"><b>Fix</b>Restored every label from the backup, verified all series, and built a nightly job that keeps series tidy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <span class="tag">Quality</span>
+      <div>
+        <h3>Duplicates and wrong editions</h3>
+        <div class="steps">
+          <div class="step"><b>Noticed</b>Duplicate books, collected editions repeating single issues, and one wrong-edition audiobook.</div>
+          <div class="step"><b>Cause</b>Loose title matching and collections that bundle issues I already had.</div>
+          <div class="step fix"><b>Fix</b>Stricter matching, page-count and edition checks against each book's copyright page, and a "single issues only" rule.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <span class="tag">Reliability</span>
+      <div>
+        <h3>Database busy errors during heavy imports</h3>
+        <div class="steps">
+          <div class="step"><b>Noticed</b>Filing comics failed with server errors under load.</div>
+          <div class="step"><b>Cause</b>The comic manager's database was locked while it processed new series.</div>
+          <div class="step fix"><b>Fix</b>Added wait-and-retry handling, so imports finish cleanly instead of failing.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="rules">
+    <h2>Rules the system enforces</h2>
+    <p class="sub">I defined what "clean" means for my libraries; the automation checks it every night.</p>
+    <div class="grid2">
+      <div class="card rule"><span class="check">✓</span><div><h3>No duplicates</h3><p>Each book or comic issue exists once.</p></div></div>
+      <div class="card rule"><span class="check">✓</span><div><h3>Formats together</h3><p>An ebook sits with its audiobook as one book.</p></div></div>
+      <div class="card rule"><span class="check">✓</span><div><h3>Single issues</h3><p>No collected editions that repeat issues already owned.</p></div></div>
+      <div class="card rule"><span class="check">✓</span><div><h3>Tidy series, verified orders</h3><p>One series per set of books, and reading orders taken from published guides, never guessed.</p></div></div>
+    </div>
+  </section>
+
+  <section id="role">
+    <h2>My role</h2>
+    <p class="sub">I designed the system, own every decision about it, and keep it running.</p>
+    <div class="grid2">
+      <div class="card role">
+        <h3>What I do</h3>
+        <ul>
+          <li>Designed the platform and chose the tools and services.</li>
+          <li>Set the requirements and the rules the system follows.</li>
+          <li>Test every change and verify results before calling anything done.</li>
+          <li>Spot problems, trace them to the cause and decide the fix.</li>
+          <li>Run day-to-day operations, backups and recovery.</li>
+        </ul>
+      </div>
+      <div class="card role">
+        <h3>How I build</h3>
+        <ul>
+          <li>Use AI-assisted development as a build tool: I scope each task, review the changes and test them before they go live.</li>
+          <li>Keep everything in Git with branch-and-merge changes.</li>
+          <li>Write runbooks and a disaster-recovery guide so the system can be rebuilt from scratch.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <h2>Tools &amp; skills</h2>
+    <p class="sub">What the project uses day to day.</p>
+    <div class="chips">
+      <span class="chip">Linux (Ubuntu)</span><span class="chip">Docker</span><span class="chip">Python</span><span class="chip">REST APIs</span><span class="chip">SQLite</span><span class="chip">Bash</span><span class="chip">cron &amp; systemd</span><span class="chip">Git &amp; GitHub</span><span class="chip">Cloudflare Tunnel &amp; Access</span><span class="chip">Restic &amp; Backblaze B2</span><span class="chip">Audiobookshelf</span><span class="chip">Komga</span><span class="chip">ntfy</span><span class="chip">Troubleshooting</span><span class="chip">Quality assurance</span><span class="chip">AI-assisted development</span>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Built and maintained by me. This page describes a private, personal system; the server itself isn't public.</div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById('theme');
+  try{var saved=localStorage.getItem('theme');if(saved)root.setAttribute('data-theme',saved);}catch(e){}
+  btn.addEventListener('click',function(){
+    var dark=root.getAttribute('data-theme')==='dark'||(!root.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+    var next=dark?'light':'dark';root.setAttribute('data-theme',next);
+    try{localStorage.setItem('theme',next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
